@@ -3,11 +3,11 @@
  derived from the source code of Encryption for the Masses 2.02a, which is
  Copyright (c) 1998-2000 Paul Le Roux and which is governed by the 'License
  Agreement for Encryption for the Masses'. Modifications and additions to
- the original source code (contained in this file) and all other portions of
- this file are Copyright (c) 2003-2009 TrueCrypt Foundation and are governed
- by the TrueCrypt License 2.8 the full text of which is contained in the
- file License.txt included in TrueCrypt binary and source code distribution
- packages. */
+ the original source code (contained in this file) and all other portions
+ of this file are Copyright (c) 2003-2010 TrueCrypt Developers Association
+ and are governed by the TrueCrypt License 3.0 the full text of which is
+ contained in the file License.txt included in TrueCrypt binary and source
+ code distribution packages. */
 
 #ifndef TC_HEADER_NTDRIVER
 #define TC_HEADER_NTDRIVER
@@ -61,7 +61,7 @@ typedef struct EXTENSION
 	ULONG BytesPerSector;		/* Partition info */
 	UCHAR PartitionType;		/* Partition info */
 	
-	int HostBytesPerSector;
+	uint32 HostBytesPerSector;
 
 	KEVENT keVolumeEvent;		/* Event structure used when setting up a device */
 
@@ -76,7 +76,6 @@ typedef struct EXTENSION
 
 	WCHAR wszVolume[TC_MAX_PATH];	/*  DONT change this size without also changing MOUNT_LIST_STRUCT! */
 
-	// Container file date/time (used to reset date and time of file-hosted volumes after dismount or unsuccessful mount attempt, to preserve plausible deniability of hidden volumes).
 	LARGE_INTEGER fileCreationTime;
 	LARGE_INTEGER fileLastAccessTime;
 	LARGE_INTEGER fileLastWriteTime;
@@ -160,7 +159,7 @@ BOOL IsDriveLetterAvailable (int nDosDriveNo);
 NTSTATUS TCReadRegistryKey (PUNICODE_STRING keyPath, wchar_t *keyValueName, PKEY_VALUE_PARTIAL_INFORMATION *keyData);
 NTSTATUS TCWriteRegistryKey (PUNICODE_STRING keyPath, wchar_t *keyValueName, ULONG keyValueType, void *valueData, ULONG valueSize);
 BOOL IsVolumeClassFilterRegistered ();
-uint32 ReadRegistryConfigFlags ();
+NTSTATUS ReadRegistryConfigFlags (BOOL driverEntry);
 NTSTATUS WriteRegistryConfigFlags (uint32 flags);
 BOOL ValidateIOBufferSize (PIRP irp, size_t requiredBufferSize, ValidateIOBufferSizeType type);
 NTSTATUS GetDeviceSectorSize (PDEVICE_OBJECT deviceObject, ULONG *bytesPerSector);

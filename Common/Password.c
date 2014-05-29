@@ -3,11 +3,11 @@
  derived from the source code of Encryption for the Masses 2.02a, which is
  Copyright (c) 1998-2000 Paul Le Roux and which is governed by the 'License
  Agreement for Encryption for the Masses'. Modifications and additions to
- the original source code (contained in this file) and all other portions of
- this file are Copyright (c) 2003-2009 TrueCrypt Foundation and are governed
- by the TrueCrypt License 2.8 the full text of which is contained in the
- file License.txt included in TrueCrypt binary and source code distribution
- packages. */
+ the original source code (contained in this file) and all other portions
+ of this file are Copyright (c) 2003-2010 TrueCrypt Developers Association
+ and are governed by the TrueCrypt License 3.0 the full text of which is
+ contained in the file License.txt included in TrueCrypt binary and source
+ code distribution packages. */
 
 #include "Tcdefs.h"
 
@@ -123,6 +123,7 @@ int ChangePwd (char *lpszVolume, Password *oldPassword, Password *newPassword, i
 	PCRYPTO_INFO cryptoInfo = NULL, ci = NULL;
 	void *dev = INVALID_HANDLE_VALUE;
 	DWORD dwError;
+	DWORD bytesRead;
 	BOOL bDevice;
 	unsigned __int64 hostSize = 0;
 	int volumeType;
@@ -133,6 +134,7 @@ int ChangePwd (char *lpszVolume, Password *oldPassword, Password *newPassword, i
 	BOOL bTimeStampValid = FALSE;
 	LARGE_INTEGER headerOffset;
 	BOOL backupHeader;
+	DISK_GEOMETRY driveInfo;
 
 	if (oldPassword->Length == 0 || newPassword->Length == 0) return -1;
 
@@ -171,6 +173,12 @@ int ChangePwd (char *lpszVolume, Password *oldPassword, Password *newPassword, i
 			DWORD dwResult;
 			BOOL bResult;
 
+			bResult = DeviceIoControl (dev, IOCTL_DISK_GET_DRIVE_GEOMETRY, NULL, 0,
+				&driveInfo, sizeof (driveInfo), &dwResult, NULL);
+
+			if (!bResult)
+				goto error;
+
 			bResult = GetPartitionInfo (lpszVolume, &diskInfo);
 
 			if (bResult)
@@ -179,14 +187,6 @@ int ChangePwd (char *lpszVolume, Password *oldPassword, Password *newPassword, i
 			}
 			else
 			{
-				DISK_GEOMETRY driveInfo;
-
-				bResult = DeviceIoControl (dev, IOCTL_DISK_GET_DRIVE_GEOMETRY, NULL, 0,
-					&driveInfo, sizeof (driveInfo), &dwResult, NULL);
-
-				if (!bResult)
-					goto error;
-
 				hostSize = driveInfo.Cylinders.QuadPart * driveInfo.BytesPerSector *
 					driveInfo.SectorsPerTrack * driveInfo.TracksPerCylinder;
 			}
@@ -215,15 +215,8 @@ int ChangePwd (char *lpszVolume, Password *oldPassword, Password *newPassword, i
 
 	if (!bDevice && bPreserveTimestamp)
 	{
-		/* Remember the container modification/creation date and time, (used to reset file date and time of
-		file-hosted volumes after password change (or attempt to), in order to preserve plausible deniability
-		of hidden volumes (last password change time is stored in the volume header). */
-
 		if (GetFileTime ((HANDLE) dev, &ftCreationTime, &ftLastAccessTime, &ftLastWriteTime) == 0)
-		{
 			bTimeStampValid = FALSE;
-			MessageBoxW (hwndDlg, GetString ("GETFILETIME_FAILED_PW"), L"TrueCrypt", MB_OK | MB_ICONEXCLAMATION);
-		}
 		else
 			bTimeStampValid = TRUE;
 	}
@@ -245,6 +238,9 @@ int ChangePwd (char *lpszVolume, Password *oldPassword, Password *newPassword, i
 			break;
 
 		case TC_VOLUME_TYPE_HIDDEN_LEGACY:
+			if (bDevice && driveInfo.BytesPerSector != TC_SECTOR_SIZE_LEGACY)
+				continue;
+
 			headerOffset.QuadPart = hostSize - TC_HIDDEN_VOLUME_HEADER_OFFSET_LEGACY;
 			break;
 		}
@@ -256,8 +252,13 @@ int ChangePwd (char *lpszVolume, Password *oldPassword, Password *newPassword, i
 		}
 
 		/* Read in volume header */
-		nStatus = _lread ((HFILE) dev, buffer, sizeof (buffer));
-		if (nStatus != sizeof (buffer))
+		if (!ReadEffectiveVolumeHeader (bDevice, dev, buffer, &bytesRead))
+		{
+			nStatus = ERR_OS_ERROR;
+			goto error;
+		}
+
+		if (bytesRead != sizeof (buffer))
 		{
 			// Windows may report EOF when reading sectors from the last cluster of a device formatted as NTFS 
 			memset (buffer, 0, sizeof (buffer));
@@ -339,6 +340,7 @@ int ChangePwd (char *lpszVolume, Password *oldPassword, Password *newPassword, i
 				cryptoInfo->EncryptedAreaLength.Value,
 				cryptoInfo->RequiredProgramVersion,
 				cryptoInfo->HeaderFlags,
+				cryptoInfo->SectorSize,
 				wipePass < PRAND_DISK_WIPE_PASSES - 1);
 
 			if (ci != NULL)
@@ -353,8 +355,7 @@ int ChangePwd (char *lpszVolume, Password *oldPassword, Password *newPassword, i
 				goto error;
 			}
 
-			nStatus = _lwrite ((HFILE) dev, buffer, TC_VOLUME_HEADER_EFFECTIVE_SIZE);
-			if (nStatus != TC_VOLUME_HEADER_EFFECTIVE_SIZE)
+			if (!WriteEffectiveVolumeHeader (bDevice, dev, buffer))
 			{
 				nStatus = ERR_OS_ERROR;
 				goto error;
@@ -394,11 +395,7 @@ error:
 		crypto_close (cryptoInfo);
 
 	if (bTimeStampValid)
-	{
-		// Restore the container timestamp (to preserve plausible deniability of possible hidden volume). 
-		if (SetFileTime (dev, &ftCreationTime, &ftLastAccessTime, &ftLastWriteTime) == 0)
-			MessageBoxW (hwndDlg, GetString ("SETFILETIME_FAILED_PW"), L"TrueCrypt", MB_OK | MB_ICONEXCLAMATION);
-	}
+		SetFileTime (dev, &ftCreationTime, &ftLastAccessTime, &ftLastWriteTime);
 
 	if (dev != INVALID_HANDLE_VALUE)
 		CloseHandle ((HANDLE) dev);

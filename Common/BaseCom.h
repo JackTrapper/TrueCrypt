@@ -1,9 +1,9 @@
 /*
- Copyright (c) 2007-2008 TrueCrypt Foundation. All rights reserved.
+ Copyright (c) 2007-2010 TrueCrypt Developers Association. All rights reserved.
 
- Governed by the TrueCrypt License 2.8 the full text of which is contained
- in the file License.txt included in TrueCrypt binary and source code
- distribution packages.
+ Governed by the TrueCrypt License 3.0 the full text of which is contained in
+ the file License.txt included in TrueCrypt binary and source code distribution
+ packages.
 */
 
 #ifndef TC_HEADER_BASE_COM
@@ -102,7 +102,7 @@ public:
 	static DWORD DeleteFile (BSTR file);
 	static BOOL IsPagingFileActive (BOOL checkNonWindowsPartitionsOnly);
 	static DWORD ReadWriteFile (BOOL write, BOOL device, BSTR filePath, BSTR *bufferBstr, unsigned __int64 offset, unsigned __int32 size, DWORD *sizeDone);
-	static DWORD RegisterFilterDriver (BOOL registerDriver, BOOL volumeClass);
+	static DWORD RegisterFilterDriver (BOOL registerDriver, int filterType);
 	static DWORD RegisterSystemFavoritesService (BOOL registerService);
 	static DWORD SetDriverServiceStartType (DWORD startType);
 	static DWORD WriteLocalMachineRegistryDwordValue (BSTR keyPath, BSTR valueName, DWORD value);

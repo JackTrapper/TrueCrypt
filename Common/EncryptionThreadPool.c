@@ -1,9 +1,9 @@
 /*
- Copyright (c) 2008-2009 TrueCrypt Foundation. All rights reserved.
+ Copyright (c) 2008-2010 TrueCrypt Developers Association. All rights reserved.
 
- Governed by the TrueCrypt License 2.8 the full text of which is contained
- in the file License.txt included in TrueCrypt binary and source code
- distribution packages.
+ Governed by the TrueCrypt License 3.0 the full text of which is contained in
+ the file License.txt included in TrueCrypt binary and source code distribution
+ packages.
 */
 
 #include "EncryptionThreadPool.h"
@@ -215,7 +215,7 @@ static TC_THREAD_PROC EncryptionThreadProc (void *threadArg)
 }
 
 
-BOOL EncryptionThreadPoolStart ()
+BOOL EncryptionThreadPoolStart (size_t encryptionFreeCpuCount)
 {
 	size_t cpuCount, i;
 
@@ -231,6 +231,9 @@ BOOL EncryptionThreadPoolStart ()
 		cpuCount = sysInfo.dwNumberOfProcessors;
 	}
 #endif
+
+	if (cpuCount > encryptionFreeCpuCount)
+		cpuCount -= encryptionFreeCpuCount;
 
 	if (cpuCount < 2)
 		return TRUE;
@@ -489,6 +492,12 @@ void EncryptionThreadPoolDoWork (EncryptionThreadPoolWorkType type, byte *data, 
 size_t GetEncryptionThreadCount ()
 {
 	return ThreadPoolRunning ? ThreadCount : 0;
+}
+
+
+size_t GetMaxEncryptionThreadCount ()
+{
+	return TC_ENC_THREAD_POOL_MAX_THREAD_COUNT;
 }
 
 

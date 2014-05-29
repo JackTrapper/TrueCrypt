@@ -1,9 +1,9 @@
 /*
- Copyright (c) 2007-2008 TrueCrypt Foundation. All rights reserved.
+ Copyright (c) 2007-2010 TrueCrypt Developers Association. All rights reserved.
 
- Governed by the TrueCrypt License 2.8 the full text of which is contained
- in the file License.txt included in TrueCrypt binary and source code
- distribution packages.
+ Governed by the TrueCrypt License 3.0 the full text of which is contained in
+ the file License.txt included in TrueCrypt binary and source code distribution
+ packages.
 */
 
 #include <atlcomcli.h>
@@ -151,12 +151,12 @@ DWORD BaseCom::ReadWriteFile (BOOL write, BOOL device, BSTR filePath, BSTR *buff
 }
 
 
-DWORD BaseCom::RegisterFilterDriver (BOOL registerDriver, BOOL volumeClass)
+DWORD BaseCom::RegisterFilterDriver (BOOL registerDriver, int filterType)
 {
 	try
 	{
 		BootEncryption bootEnc (NULL);
-		bootEnc.RegisterFilterDriver (registerDriver ? true : false, volumeClass ? true : false);
+		bootEnc.RegisterFilterDriver (registerDriver ? true : false, (BootEncryption::FilterType) filterType);
 	}
 	catch (SystemException &)
 	{

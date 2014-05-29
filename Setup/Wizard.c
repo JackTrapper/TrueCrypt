@@ -3,14 +3,15 @@
  derived from the source code of Encryption for the Masses 2.02a, which is
  Copyright (c) 1998-2000 Paul Le Roux and which is governed by the 'License
  Agreement for Encryption for the Masses'. Modifications and additions to
- the original source code (contained in this file) and all other portions of
- this file are Copyright (c) 2003-2009 TrueCrypt Foundation and are governed
- by the TrueCrypt License 2.8 the full text of which is contained in the
- file License.txt included in TrueCrypt binary and source code distribution
- packages. */
+ the original source code (contained in this file) and all other portions
+ of this file are Copyright (c) 2003-2010 TrueCrypt Developers Association
+ and are governed by the TrueCrypt License 3.0 the full text of which is
+ contained in the file License.txt included in TrueCrypt binary and source
+ code distribution packages. */
 
 #include "Tcdefs.h"
-
+#include <Shlobj.h>
+#include <io.h>
 #include "SelfExtract.h"
 #include "Wizard.h"
 #include "Dlgcode.h"
@@ -18,6 +19,8 @@
 #include "Common/Resource.h"
 #include "Resource.h"
 #include "Setup.h"
+
+using namespace std;
 
 enum wizard_pages
 {
@@ -314,6 +317,12 @@ BOOL CALLBACK PageDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 
 				DetermineUpgradeDowngradeStatus (TRUE, &driverVersion);
 
+				if (!bDesktopIconStatusDetermined)
+				{
+					bDesktopIcon = !bUpgrade;
+					bDesktopIconStatusDetermined = TRUE;
+				}
+
 				SetWindowTextW (GetDlgItem (GetParent (hwndDlg), IDC_BOX_TITLE), GetString ("SETUP_OPTIONS_TITLE"));
 				SetWindowTextW (GetDlgItem (GetParent (hwndDlg), IDC_BOX_INFO), GetString ("SETUP_OPTIONS_INFO"));
 				SetWindowTextW (GetDlgItem (hwndDlg, IDC_BOX_HELP), GetString ("AUTO_FOLDER_CREATION"));
@@ -324,6 +333,18 @@ BOOL CALLBACK PageDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 
 				SetDlgItemText (hwndDlg, IDC_DESTINATION, WizardDestInstallPath);
 
+				if (bUpgrade)
+				{
+					SetWindowTextW (GetDlgItem (hwndDlg, IDT_INSTALL_DESTINATION), GetString ("SETUP_UPGRADE_DESTINATION"));
+					EnableWindow (GetDlgItem (hwndDlg, IDC_DESTINATION), FALSE);
+					EnableWindow (GetDlgItem (hwndDlg, IDC_BROWSE), FALSE);
+					EnableWindow (GetDlgItem (hwndDlg, IDC_ALL_USERS), FALSE);
+
+					char path[MAX_PATH];
+					SHGetSpecialFolderPath (hwndDlg, path, CSIDL_COMMON_PROGRAMS, 0);
+					bForAllUsers = (_access ((string (path) + "\\" TC_APP_NAME).c_str(), 0) == 0);
+				}
+
 				// System Restore
 				SetCheckBox (hwndDlg, IDC_SYSTEM_RESTORE, bSystemRestore);
 				if (SystemRestoreDll == 0)
@@ -331,17 +352,6 @@ BOOL CALLBACK PageDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 					SetCheckBox (hwndDlg, IDC_SYSTEM_RESTORE, FALSE);
 					EnableWindow (GetDlgItem (hwndDlg, IDC_SYSTEM_RESTORE), FALSE);
 				}
-
-#if 0
-				// Swap files
-				SetCheckBox (hwndDlg, IDC_DISABLE_PAGING_FILES, bDisableSwapFiles);
-				if (nCurrentOS == WIN_2000)
-				{
-					bDisableSwapFiles = FALSE;
-					SetCheckBox (hwndDlg, IDC_DISABLE_PAGING_FILES, FALSE);
-					EnableWindow (GetDlgItem (hwndDlg, IDC_DISABLE_PAGING_FILES), FALSE);
-				}
-#endif // 0
 
 				SetCheckBox (hwndDlg, IDC_ALL_USERS, bForAllUsers);
 				SetCheckBox (hwndDlg, IDC_FILE_TYPE, bRegisterFileExt);
@@ -491,21 +501,6 @@ BOOL CALLBACK PageDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 			case IDC_SYSTEM_RESTORE:
 				bSystemRestore = IsButtonChecked (GetDlgItem (hCurPage, IDC_SYSTEM_RESTORE));
 				return 1;
-
-#if 0
-			case IDC_DISABLE_PAGING_FILES:
-
-				bDisableSwapFiles = IsButtonChecked (GetDlgItem (hCurPage, IDC_DISABLE_PAGING_FILES));
-
-				if (!bDisableSwapFiles
-					&& AskWarnNoYes("CONFIRM_NOT_DISABLING_SWAP_FILES") == IDNO)
-				{
-					bDisableSwapFiles = TRUE;
-					SetCheckBox (hwndDlg, IDC_DISABLE_PAGING_FILES, bDisableSwapFiles);
-				}
-
-				return 1;
-#endif // 0
 
 			case IDC_ALL_USERS:
 				bForAllUsers = IsButtonChecked (GetDlgItem (hCurPage, IDC_ALL_USERS));
@@ -674,7 +669,7 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 				EnableWindow (GetDlgItem (hwndDlg, IDHELP), TRUE);
 
 				if (nCurrentOS == WIN_2000)
-					WarningDirect (L"Warning: Please note that this may be the last version of TrueCrypt that supports Windows 2000. If you want to be able to upgrade to future versions of TrueCrypt (which is highly recommended), you will need to upgrade to Windows XP or a later version of Windows.\n\nNote: Microsoft will stop issuing security updates for Windows 2000 to the general public on 7/13/2010 (the last non-security update for Windows 2000 was issued to the general public in 2005).");
+					WarningDirect (L"Warning: Please note that this may be the last version of TrueCrypt that supports Windows 2000. If you want to be able to upgrade to future versions of TrueCrypt (which is highly recommended), you will need to upgrade to Windows XP or a later version of Windows.\n\nNote: Microsoft stopped issuing security updates for Windows 2000 to the general public on 7/13/2010 (the last non-security update for Windows 2000 was issued to the general public in 2005).");
 			}
 
 			else if (nCurPageNo == WIZARD_MODE_PAGE)
