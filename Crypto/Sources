@@ -1,0 +1,20 @@
+TARGETNAME=Crypto
+TARGETTYPE=DRIVER_LIBRARY
+
+INCLUDES = ..
+
+NTTARGETFILE0 = "$(OBJ_PATH)\$(O)\Aes_$(TC_ARCH).obj"
+
+SOURCES = \
+	Aes_$(TC_ARCH).asm \
+	Aeskey.c \
+	Aestab.c \
+	Blowfish.c \
+	Cast.c \
+	Des.c \
+	Rmd160.c \
+	Serpent.c \
+	Sha1.c \
+	Sha2.c \
+	Twofish.c \
+	Whirlpool.c
